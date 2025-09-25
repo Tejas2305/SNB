@@ -185,8 +185,18 @@ public class DashboardActivity extends AppCompatActivity implements NoticeAdapte
     }
 
     private void openAddNoticeActivity() {
-        // TODO: Create AddEditNoticeActivity
-        Toast.makeText(this, "Add Notice functionality coming soon!", Toast.LENGTH_SHORT).show();
+        Intent intent = new Intent(this, AddEditNoticeActivity.class);
+        startActivityForResult(intent, 100);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 100 && resultCode == RESULT_OK) {
+            // Refresh notices after adding/editing
+            loadNotices();
+            Toast.makeText(this, "Notice updated successfully!", Toast.LENGTH_SHORT).show();
+        }
     }
 
     @Override
@@ -197,8 +207,120 @@ public class DashboardActivity extends AppCompatActivity implements NoticeAdapte
 
     @Override
     public void onNoticeMenuClick(Notice notice, int position, android.view.View anchorView) {
-        // TODO: Show notice menu (Edit, Delete, Archive)
-        Toast.makeText(this, "Notice menu for: " + notice.getTitle(), Toast.LENGTH_SHORT).show();
+        showNoticeMenu(notice, position, anchorView);
+    }
+
+    private void showNoticeMenu(Notice notice, int position, android.view.View anchorView) {
+        android.widget.PopupMenu popup = new android.widget.PopupMenu(this, anchorView);
+        popup.getMenuInflater().inflate(R.menu.notice_item_menu, popup.getMenu());
+        
+        // Show/hide menu items based on permissions
+        android.view.Menu menu = popup.getMenu();
+        boolean canEdit = currentUser.getUserId().equals(notice.getCreatedBy()) || authService.isAdmin();
+        menu.findItem(R.id.action_edit).setVisible(canEdit);
+        menu.findItem(R.id.action_delete).setVisible(canEdit);
+        menu.findItem(R.id.action_archive).setVisible(authService.isAdmin());
+        
+        popup.setOnMenuItemClickListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.action_view) {
+                viewNoticeDetails(notice);
+                return true;
+            } else if (id == R.id.action_edit) {
+                editNotice(notice);
+                return true;
+            } else if (id == R.id.action_delete) {
+                deleteNotice(notice, position);
+                return true;
+            } else if (id == R.id.action_archive) {
+                archiveNotice(notice, position);
+                return true;
+            }
+            return false;
+        });
+        
+        popup.show();
+    }
+
+    private void viewNoticeDetails(Notice notice) {
+        // Create a dialog to show full notice details
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
+        android.view.View dialogView = getLayoutInflater().inflate(R.layout.dialog_notice_details, null);
+        
+        // Populate dialog views
+        android.widget.TextView tvTitle = dialogView.findViewById(R.id.tvDialogTitle);
+        android.widget.TextView tvDescription = dialogView.findViewById(R.id.tvDialogDescription);
+        android.widget.TextView tvCategory = dialogView.findViewById(R.id.tvDialogCategory);
+        android.widget.TextView tvAuthor = dialogView.findViewById(R.id.tvDialogAuthor);
+        android.widget.TextView tvDate = dialogView.findViewById(R.id.tvDialogDate);
+        android.widget.TextView tvDepartment = dialogView.findViewById(R.id.tvDialogDepartment);
+        android.widget.TextView tvSubject = dialogView.findViewById(R.id.tvDialogSubject);
+        
+        tvTitle.setText(notice.getTitle());
+        tvDescription.setText(notice.getDescription());
+        tvCategory.setText(notice.getCategory().getDisplayName());
+        tvAuthor.setText(notice.getCreatedByName());
+        tvDate.setText(com.example.git_trial.utils.DateUtils.formatDateTime(notice.getCreatedAt()));
+        tvDepartment.setText(notice.getDepartment() != null ? notice.getDepartment() : "All");
+        
+        if (notice.getSubject() != null && !notice.getSubject().isEmpty()) {
+            tvSubject.setText(notice.getSubject());
+            tvSubject.setVisibility(android.view.View.VISIBLE);
+        } else {
+            tvSubject.setVisibility(android.view.View.GONE);
+        }
+        
+        builder.setView(dialogView)
+               .setPositiveButton("Close", null)
+               .show();
+    }
+
+    private void editNotice(Notice notice) {
+        Intent intent = new Intent(this, AddEditNoticeActivity.class);
+        intent.putExtra(AddEditNoticeActivity.EXTRA_NOTICE, notice);
+        intent.putExtra(AddEditNoticeActivity.EXTRA_EDIT_MODE, true);
+        startActivityForResult(intent, 100);
+    }
+
+    private void deleteNotice(Notice notice, int position) {
+        new AlertDialog.Builder(this)
+                .setTitle("Delete Notice")
+                .setMessage("Are you sure you want to delete \"" + notice.getTitle() + "\"? This action cannot be undone.")
+                .setPositiveButton("Delete", (dialog, which) -> {
+                    boolean success = noticeDatabase.deleteNotice(notice.getNoticeId());
+                    if (success) {
+                        noticeAdapter.removeNotice(position);
+                        Toast.makeText(this, "Notice deleted successfully", Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(this, "Failed to delete notice", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void archiveNotice(Notice notice, int position) {
+        boolean newArchiveState = !notice.isArchived();
+        String action = newArchiveState ? "archive" : "unarchive";
+        
+        new AlertDialog.Builder(this)
+                .setTitle((newArchiveState ? "Archive" : "Unarchive") + " Notice")
+                .setMessage("Are you sure you want to " + action + " \"" + notice.getTitle() + "\"?")
+                .setPositiveButton(newArchiveState ? "Archive" : "Unarchive", (dialog, which) -> {
+                    boolean success = noticeDatabase.archiveNotice(notice.getNoticeId(), newArchiveState);
+                    if (success) {
+                        notice.setArchived(newArchiveState);
+                        noticeAdapter.updateNotice(notice, position);
+                        Toast.makeText(this, "Notice " + action + "d successfully", Toast.LENGTH_SHORT).show();
+                        
+                        // Refresh the list to reflect changes
+                        loadNotices();
+                    } else {
+                        Toast.makeText(this, "Failed to " + action + " notice", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     @Override
@@ -219,8 +341,7 @@ public class DashboardActivity extends AppCompatActivity implements NoticeAdapte
         int id = item.getItemId();
         
         if (id == R.id.action_search) {
-            // TODO: Implement search functionality
-            Toast.makeText(this, "Search functionality coming soon!", Toast.LENGTH_SHORT).show();
+            showSearchDialog();
             return true;
         } else if (id == R.id.action_admin_panel) {
             if (authService.isAdmin()) {
@@ -260,5 +381,116 @@ public class DashboardActivity extends AppCompatActivity implements NoticeAdapte
         super.onResume();
         // Refresh notices when returning to dashboard
         loadNotices();
+    }
+
+    private void showSearchDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        android.view.View dialogView = getLayoutInflater().inflate(R.layout.dialog_search, null);
+        
+        com.google.android.material.textfield.TextInputEditText etSearch = dialogView.findViewById(R.id.etSearch);
+        
+        AlertDialog dialog = builder.setTitle("Search Notices")
+                .setView(dialogView)
+                .setPositiveButton("Search", null)
+                .setNegativeButton("Cancel", null)
+                .create();
+        
+        dialog.setOnShowListener(dialogInterface -> {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+                String query = etSearch.getText().toString().trim();
+                if (!query.isEmpty()) {
+                    performSearch(query);
+                    dialog.dismiss();
+                } else {
+                    etSearch.setError("Please enter a search term");
+                }
+            });
+        });
+        
+        dialog.show();
+    }
+
+    private void performSearch(String query) {
+        List<Notice> searchResults = noticeDatabase.searchNotices(query, currentUser);
+        noticeAdapter.updateNotices(searchResults);
+        
+        // Update tab selection to show we're in search mode
+        tabLayout.clearOnTabSelectedListeners();
+        for (int i = 0; i < tabLayout.getTabCount(); i++) {
+            TabLayout.Tab tab = tabLayout.getTabAt(i);
+            if (tab != null) {
+                tab.setText(tab.getText() + (i == 0 ? " (Search: \"" + query + "\")" : ""));
+            }
+        }
+        
+        // Re-add the listener
+        tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+                // Reset search when switching tabs
+                resetTabTitles();
+                filterNoticesByTab(tab.getPosition());
+            }
+
+            @Override
+            public void onTabUnselected(TabLayout.Tab tab) {}
+
+            @Override
+            public void onTabReselected(TabLayout.Tab tab) {}
+        });
+        
+        Toast.makeText(this, "Found " + searchResults.size() + " results for \"" + query + "\"", Toast.LENGTH_SHORT).show();
+    }
+
+    private void resetTabTitles() {
+        tabLayout.clearOnTabSelectedListeners();
+        
+        // Reset all tab titles
+        String[] originalTitles = {"All Notices", "Common", "Department", "Annual"};
+        for (int i = 0; i < Math.min(originalTitles.length, tabLayout.getTabCount()); i++) {
+            TabLayout.Tab tab = tabLayout.getTabAt(i);
+            if (tab != null) {
+                tab.setText(originalTitles[i]);
+            }
+        }
+        
+        // Handle dynamic tabs based on user role
+        int nextIndex = originalTitles.length;
+        if (authService.isStudent() || authService.isTeacher()) {
+            TabLayout.Tab subjectTab = tabLayout.getTabAt(nextIndex);
+            if (subjectTab != null) {
+                subjectTab.setText("Subject");
+                nextIndex++;
+            }
+        }
+        
+        if (authService.canManageNotices()) {
+            TabLayout.Tab myNoticesTab = tabLayout.getTabAt(nextIndex);
+            if (myNoticesTab != null) {
+                myNoticesTab.setText("My Notices");
+                nextIndex++;
+            }
+        }
+        
+        if (authService.isAdmin()) {
+            TabLayout.Tab archivedTab = tabLayout.getTabAt(nextIndex);
+            if (archivedTab != null) {
+                archivedTab.setText("Archived");
+            }
+        }
+        
+        // Re-add the listener
+        tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+                filterNoticesByTab(tab.getPosition());
+            }
+
+            @Override
+            public void onTabUnselected(TabLayout.Tab tab) {}
+
+            @Override
+            public void onTabReselected(TabLayout.Tab tab) {}
+        });
     }
 }
