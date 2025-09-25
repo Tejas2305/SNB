@@ -12,6 +12,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.tabs.TabLayout;
 import com.example.git_trial.MainActivity;
@@ -26,12 +27,13 @@ import com.example.git_trial.adapters.NoticeAdapter;
 import java.util.ArrayList;
 import java.util.List;
 
-public class DashboardActivity extends AppCompatActivity {
+public class DashboardActivity extends AppCompatActivity implements NoticeAdapter.OnNoticeClickListener {
 
     private TextView tvWelcome, tvRoleInfo;
     private TabLayout tabLayout;
     private RecyclerView recyclerNotices;
     private FloatingActionButton fabAddNotice;
+    private MaterialToolbar toolbar;
     
     private AuthService authService;
     private NoticeDatabase noticeDatabase;
@@ -56,6 +58,7 @@ public class DashboardActivity extends AppCompatActivity {
         }
 
         initializeViews();
+        setupToolbar();
         setupUserInterface();
         setupRecyclerView();
         setupTabLayout();
@@ -63,11 +66,25 @@ public class DashboardActivity extends AppCompatActivity {
     }
 
     private void initializeViews() {
+        toolbar = findViewById(R.id.toolbar);
         tvWelcome = findViewById(R.id.tvWelcome);
         tvRoleInfo = findViewById(R.id.tvRoleInfo);
         tabLayout = findViewById(R.id.tabLayout);
         recyclerNotices = findViewById(R.id.recyclerNotices);
         fabAddNotice = findViewById(R.id.fabAddNotice);
+    }
+
+    private void setupToolbar() {
+        setSupportActionBar(toolbar);
+        if (getSupportActionBar() != null) {
+            String title = "Smart Notice Board";
+            if (authService.isAdmin()) {
+                title += " - Admin";
+            } else if (authService.isTeacher()) {
+                title += " - Teacher";
+            }
+            getSupportActionBar().setTitle(title);
+        }
     }
 
     private void setupUserInterface() {
@@ -82,22 +99,12 @@ public class DashboardActivity extends AppCompatActivity {
         } else {
             fabAddNotice.hide();
         }
-
-        // Set toolbar title based on role
-        if (getSupportActionBar() != null) {
-            String title = "Smart Notice Board";
-            if (authService.isAdmin()) {
-                title += " - Admin";
-            } else if (authService.isTeacher()) {
-                title += " - Teacher";
-            }
-            getSupportActionBar().setTitle(title);
-        }
     }
 
     private void setupRecyclerView() {
         noticeList = new ArrayList<>();
         noticeAdapter = new NoticeAdapter(this, noticeList, currentUser);
+        noticeAdapter.setOnNoticeClickListener(this);
         recyclerNotices.setLayoutManager(new LinearLayoutManager(this));
         recyclerNotices.setAdapter(noticeAdapter);
     }
@@ -174,24 +181,24 @@ public class DashboardActivity extends AppCompatActivity {
                 break;
         }
         
-        noticeList.clear();
-        noticeList.addAll(filteredNotices);
-        noticeAdapter.notifyDataSetChanged();
+        noticeAdapter.updateNotices(filteredNotices);
     }
 
     private void openAddNoticeActivity() {
-        Intent intent = new Intent(this, AddEditNoticeActivity.class);
-        startActivityForResult(intent, 100);
+        // TODO: Create AddEditNoticeActivity
+        Toast.makeText(this, "Add Notice functionality coming soon!", Toast.LENGTH_SHORT).show();
     }
 
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == 100 && resultCode == RESULT_OK) {
-            // Refresh notices after adding/editing
-            loadNotices();
-            Toast.makeText(this, "Notice updated successfully!", Toast.LENGTH_SHORT).show();
-        }
+    public void onNoticeClick(Notice notice, int position) {
+        // TODO: Open notice details activity
+        Toast.makeText(this, "Notice clicked: " + notice.getTitle(), Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onNoticeMenuClick(Notice notice, int position, android.view.View anchorView) {
+        // TODO: Show notice menu (Edit, Delete, Archive)
+        Toast.makeText(this, "Notice menu for: " + notice.getTitle(), Toast.LENGTH_SHORT).show();
     }
 
     @Override
