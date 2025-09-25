@@ -1,3 +1,30 @@
 <resources>
-    <string name="app_name">GIT_trial</string>
+    <string name="app_name">Smart Notice Board</string>
+    <string name="login_title">Welcome to SNB</string>
+    <string name="student_login">Student Login</string>
+    <string name="teacher_login">Teacher Login</string>
+    <string name="admin_login">Admin Login</string>
+    <string name="username">Username</string>
+    <string name="password">Password</string>
+    <string name="login">Login</string>
+    <string name="register">Register</string>
+    <string name="dashboard">Dashboard</string>
+    <string name="common_notices">Common Notices</string>
+    <string name="dept_notices">Department Notices</string>
+    <string name="annual_notices">Annual Notices</string>
+    <string name="subject_notices">Subject Notices</string>
+    <string name="add_notice">Add Notice</string>
+    <string name="edit_notice">Edit Notice</string>
+    <string name="delete_notice">Delete Notice</string>
+    <string name="notice_title">Notice Title</string>
+    <string name="notice_description">Notice Description</string>
+    <string name="attach_file">Attach File</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="search">Search</string>
+    <string name="logout">Logout</string>
+    <string name="admin_panel">Admin Panel</string>
+    <string name="manage_users">Manage Users</string>
+    <string name="all_notices">All Notices</string>
+    <string name="computer_science">Computer Science Department</string>
 </resources>
